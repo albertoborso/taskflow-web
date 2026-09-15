@@ -24,8 +24,8 @@ resolved at request time, so builds do not require a running API.
 
 - `/register`: creates an account and redirects to `/login?registered=1`.
 - `/login`: logs in through a same-origin Route Handler and redirects to `/dashboard`.
-- `/dashboard`: verifies the current user and displays name/email.
-- `/projects/[id]`: authenticated placeholder; no project data or CRUD yet.
+- `/dashboard`: verifies the current user, lists paginated projects, and offers creation.
+- `/projects/[id]`: authenticated project details, editing, and confirmed deletion. Tasks remain a placeholder.
 - `/`: redirects to login/dashboard according to the verified session.
 - `POST /api/auth/register`, `/api/auth/login`, `/api/auth/logout`.
 
@@ -103,3 +103,42 @@ Secure cookies, cache headers, and live FastAPI invalid-credential rejection.
 No production accounts are created by these checks. The temporary test fixture is
 not part of the app. The existing Google font integration can require network access
 at build time.
+
+## Milestone 3: projects
+
+Project reads and mutations use non-redirecting `verifySession`/`authenticatedFetch`.
+`requireSession` is a page-only adapter; pages handle project-read 401s with login
+redirects. JSON project handlers return JSON 401s, never navigation responses.
+Origin/JSON checks are shared with auth handlers. Every domain operation verifies
+its session and forwards the bearer token; ownership remains enforced by FastAPI.
+Only name/description are accepted from project forms. IDs are encoded as path
+segments against a fixed upstream origin. Mutation responses expose only an ID or
+success flag, and safe errors preserve request IDs. No tokens reach client props.
+
+POST `/api/projects` creates; PATCH/DELETE `/api/projects/[id]` edit/delete.
+The edit form submits both fields; PATCH also accepts individual fields and preserves omissions. Explicit null and empty descriptions are forwarded unchanged. Empty descriptions
+are allowed; no undocumented maximum is imposed. Delete maps upstream 204 to an
+empty 204 response. Mutations are not automatically retried, since a timeout can
+occur after a successful write. Reload before retrying an uncertain change.
+
+Dashboard pagination validates limit (1–100) and offset, defaults to 20/0, and
+preserves other query parameters. There is no total count: Next is available for
+full pages and can lead to an empty final page with Previous navigation. Creation
+opens the new project. Saving refreshes uncached server data; deleting the current
+project replaces navigation with the dashboard. Not-found reads use the backend's
+404 response; 403, validation, conflict, and unavailable errors remain distinct.
+
+Verification includes local fixture CRUD, authentication/ownership rejection,
+JSON 401 responses, pagination, origin/content type checks, safe errors, and 204
+handling. No production project data is created or changed by these checks.
+
+### Project failure diagnostics
+
+Mutation failures use allowlisted codes: UPSTREAM_TIMEOUT, UPSTREAM_NETWORK_ERROR,
+and SERVICE_UNAVAILABLE distinguish uncertain transport failures from service errors.
+Uncertain writes advise reloading/checking before retrying; there are no automatic
+retries. Browser errors retain validated request IDs even on 401 and unreadable
+response bodies. For a detail-page 404, the validated reference is recorded in the
+server log as `project_unavailable`; the public not-found response stays identical
+for missing/inaccessible projects. No resource IDs, tokens, bodies, or backend
+messages are logged there.

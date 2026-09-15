@@ -1,21 +1,11 @@
 import "server-only";
 import { safeRequestId } from "./request-id";
 import { ApiError } from "@/lib/api/error";
-import { getAppOrigin } from "@/lib/server/config";
+import { jsonResponse, checkMutationRequest } from "@/lib/server/http";
 import type { AuthMode, FieldErrors } from "@/lib/auth/validation";
 
-export function authJson(body: unknown, status = 200) {
-  return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
-}
-
-export function checkAuthRequest(request: Request): Response | undefined {
-  if (request.headers.get("origin") !== getAppOrigin(request.url)) {
-    return authJson({ message: "Request origin is not allowed." }, 403);
-  }
-  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
-    return authJson({ message: "Send a JSON request." }, 415);
-  }
-}
+export const authJson = jsonResponse;
+export const checkAuthRequest = checkMutationRequest;
 
 export function authFailure(error: unknown, mode: AuthMode | "logout") {
   const requestId = error instanceof ApiError ? safeRequestId(error.requestId) : undefined;

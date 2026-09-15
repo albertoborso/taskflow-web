@@ -46,3 +46,13 @@ export interface Task {
   created_at: string;
   updated_at: string;
 }
+
+export interface ProjectCreateInput {
+  name: string;
+  description?: string | null;
+}
+
+export interface ProjectUpdateInput {
+  name?: string | null;
+  description?: string | null;
+}

@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { ApiError } from "@/lib/api/error";
-import { apiFetch } from "@/lib/server/api/client";
+import { apiFetch, type RequestOptions } from "@/lib/server/api/client";
 import { getCurrentUser } from "@/lib/server/api/auth";
 import { safeRequestId } from "./request-id";
 import { readSessionToken } from "./cookies";
@@ -29,25 +29,32 @@ export const getSession = cache(async (): Promise<Session> => {
   }
 });
 
-export async function requireSession() {
+// No navigation here: safe for JSON Route Handlers and domain operations.
+export async function verifySession() {
   const session = await getSession();
-  if (session.status === "anonymous") redirect(session.expired ? "/login?expired=1" : "/login");
+  if (session.status === "anonymous") {
+    throw new ApiError({ status: 401, code: session.expired ? "UNAUTHORIZED" : "SESSION_MISSING", message: "Please log in again.", requestId: session.requestId });
+  }
   if (session.status === "unavailable") {
     throw new ApiError({ status: 503, code: "SESSION_UNAVAILABLE", message: "Unable to verify your session. Please try again.", requestId: session.requestId });
   }
   return session;
 }
 
-// Resource reads verify the session themselves, independently of route layouts.
-export async function authenticatedFetch<T>(
-  path: `/api/v1/${string}`,
-  query?: Record<string, string | number | undefined>,
-): Promise<T> {
-  const { token } = await requireSession();
+// Page-only adapter. JSON handlers must use verifySession instead.
+export async function requireSession() {
   try {
-    return await apiFetch<T>(path, { token, query });
+    return await verifySession();
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) redirect("/login?expired=1");
+    if (error instanceof ApiError && error.status === 401) redirect(error.code === "SESSION_MISSING" ? "/login" : "/login?expired=1");
     throw error;
   }
+}
+
+export async function authenticatedFetch<T>(
+  path: `/api/v1/${string}`,
+  options: Omit<RequestOptions, "token"> = {},
+): Promise<T> {
+  const { token } = await verifySession();
+  return apiFetch<T>(path, { ...options, token });
 }

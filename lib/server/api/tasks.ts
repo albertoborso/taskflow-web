@@ -11,7 +11,7 @@ export interface TaskFilters extends PaginationParams {
 
 export function listTasks(projectId: string, filters: TaskFilters = {}): Promise<Page<Task>> {
   return authenticatedFetch<Page<Task>>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks`, {
-    ...filters,
+    query: { ...filters },
   });
 }
 
