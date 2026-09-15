@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TaskFlow web
 
-## Getting Started
+Next.js App Router, React, TypeScript, and Tailwind CSS frontend for the existing
+[TaskFlow API](https://taskflow-api-1-11gt.onrender.com).
 
-First, run the development server:
+## Development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Run `npm ci` to install the locked dependencies.
+2. Copy `.env.example` to `.env.local`.
+3. Run `npm run dev` and open http://localhost:3000.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`TASKFLOW_API_URL` is a server-only backend **origin**, without `/api/v1`, a query,
+or credentials. Production requires HTTPS. Set it in the deployment environment;
+do not rename it with a `NEXT_PUBLIC_` prefix. Configuration is validated on the
+first API request, so placeholder pages can build without a configured backend.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Milestone 1 scope
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`/`, `/login`, `/register`, `/dashboard`, and `/projects/[id]` are placeholders.
+The `(protected)` route group is organizational and **does not enforce access yet**.
+Pages do not fetch or display private data. There are no login/registration flows,
+cookies, mutation handlers, or CRUD controls.
 
-## Learn More
+## Structure and boundaries
 
-To learn more about Next.js, take a look at the following resources:
+- `app/`: server-rendered pages and route-group layouts.
+- `components/ui/`: the shared page heading currently used by all pages.
+- `types/`: documented API/domain contracts; UUIDs/date-times stay strings.
+- `lib/api/error.ts`: shared normalized `ApiError`.
+- `lib/server/config.ts`: lazy environment configuration.
+- `lib/server/api/`: server-only fetch wrapper and profile/project/task reads.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Server modules use Next.js's built-in `server-only` marker (no added dependency).
+Domain functions accept an explicit token; session storage and cookie access are
+deferred to the authentication milestone. Do not pass tokens to Client Components.
+Unused feature/session folders will be introduced with their first implementation.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The wrapper uses native fetch, JSON bodies, encoded query parameters, a 30-second
+timeout covering body reads, `no-store`, and no redirects or automatic retries.
+Use `apiFetch<void>` for endpoints returning `204`. Errors preserve HTTP status,
+backend code, validation locations, and request ID; network errors have null status.
+Malformed/non-JSON responses become normalized errors. Configuration errors remain
+developer errors. Backend messages are data, not HTML; future UI should map known
+codes to safe messages rather than indiscriminately displaying backend messages.
 
-## Deploy on Vercel
+Types follow the OpenAPI contract inspected during planning. Success payload types
+are compile-time contracts, not runtime schema validation. Error envelopes are
+checked at runtime. Lists contain `items`, `limit`, and `offset`, with no total.
+Refresh/revocation endpoints are not documented; no refresh behavior is assumed.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Checks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run lint`
+- `npm run build`
+
+Neither command needs API credentials or makes requests to TaskFlow. The existing
+Google font integration may require network access at build time.
