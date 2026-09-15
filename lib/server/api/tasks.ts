@@ -1,5 +1,5 @@
 import "server-only";
-import { apiFetch } from "./client";
+import { authenticatedFetch } from "@/lib/server/auth/session";
 import type { Page, PaginationParams } from "@/types/api";
 import type { Task, TaskPriority, TaskStatus } from "@/types/domain";
 
@@ -9,12 +9,12 @@ export interface TaskFilters extends PaginationParams {
   due_before?: string;
 }
 
-export function listTasks(token: string, projectId: string, filters: TaskFilters = {}): Promise<Page<Task>> {
-  return apiFetch<Page<Task>>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks`, {
-    token, query: { ...filters },
+export function listTasks(projectId: string, filters: TaskFilters = {}): Promise<Page<Task>> {
+  return authenticatedFetch<Page<Task>>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks`, {
+    ...filters,
   });
 }
 
-export function getTask(token: string, id: string): Promise<Task> {
-  return apiFetch<Task>(`/api/v1/tasks/${encodeURIComponent(id)}`, { token });
+export function getTask(id: string): Promise<Task> {
+  return authenticatedFetch<Task>(`/api/v1/tasks/${encodeURIComponent(id)}`);
 }
