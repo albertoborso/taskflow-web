@@ -3,6 +3,56 @@
 Next.js App Router, React, TypeScript, and Tailwind CSS frontend for the existing
 [TaskFlow API](https://taskflow-api-1-11gt.onrender.com).
 
+## Live demo
+
+- [Frontend on Vercel](https://taskflow-web-chi.vercel.app)
+- [Backend Swagger documentation](https://taskflow-api-1-11gt.onrender.com/docs)
+
+## Architecture
+
+```text
+Browser → Next.js on Vercel → FastAPI on Render → PostgreSQL on Render
+```
+
+Next.js renders authenticated pages and handles same-origin browser mutations.
+JWTs are stored in HttpOnly cookies on the frontend origin; client JavaScript
+cannot read them. Next.js reads the cookie server-side and forwards authenticated
+requests to FastAPI with a bearer token. FastAPI remains authoritative for
+authentication, ownership, validation, and persistence in PostgreSQL.
+
+## Key engineering decisions
+
+- **Server/client boundary:** Server Components load protected data; Client
+  Components handle forms and interaction. Server-only API modules keep tokens
+  and backend configuration out of client bundles.
+- **Cookie-based authentication:** Host-only HttpOnly cookies use SameSite=Lax,
+  Path=/, Secure in production, and the backend's token lifetime. Mutation
+  handlers validate Origin and JSON content type.
+- **Ownership isolation:** Every protected data operation verifies authentication;
+  FastAPI enforces resource ownership. Layouts and hidden UI controls are not
+  authorization boundaries.
+- **Partial PATCH semantics:** Omitted fields remain unchanged. Explicit null and
+  empty strings are preserved where the API contract permits them; the backend
+  controls task lifecycle timestamps.
+- **Request ID propagation:** Validated upstream request IDs survive error
+  normalization as safe diagnostic headers or support references, without exposing
+  raw backend errors or credentials.
+- **Uncertain writes:** Timeout and network failures explain that a mutation may
+  already have completed and advise reloading/checking before retrying. Mutations
+  are never retried automatically.
+- **GitHub Actions CI:** Pull requests and pushes to `main` run `npm ci`, lint,
+  and a production build on Ubuntu with Node.js 22. npm caching uses the lockfile;
+  build configuration uses safe placeholder origins without deployment secrets.
+
+## What this project demonstrates
+
+TaskFlow demonstrates integrating a typed Next.js frontend with a separately
+deployed REST API: secure session boundaries, authenticated project/task CRUD,
+backend-enforced ownership, precise partial updates, and resilient error handling.
+URL-based filtering and pagination, explicit UTC dates, accessible responsive
+forms, and automated lint/build checks show attention to both user experience
+and maintainability.
+
 ## Development
 
 1. Run `npm ci` to install the locked dependencies.
