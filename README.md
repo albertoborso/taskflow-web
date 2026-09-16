@@ -25,7 +25,7 @@ resolved at request time, so builds do not require a running API.
 - `/register`: creates an account and redirects to `/login?registered=1`.
 - `/login`: logs in through a same-origin Route Handler and redirects to `/dashboard`.
 - `/dashboard`: verifies the current user, lists paginated projects, and offers creation.
-- `/projects/[id]`: authenticated project details, editing, and confirmed deletion. Tasks remain a placeholder.
+- `/projects/[id]`: authenticated project details, editing, and confirmed deletion. Tasks support creation, partial editing, confirmed deletion, filtering, and pagination.
 - `/`: redirects to login/dashboard according to the verified session.
 - `POST /api/auth/register`, `/api/auth/login`, `/api/auth/logout`.
 
@@ -72,9 +72,12 @@ introduced. Forms require JavaScript. Rate limits remain the backend's responsib
 
 ## Structure
 
-- `app/`: pages, layouts, loading/error states, and auth Route Handlers.
+- `app/`: pages, layouts, loading/error states, and same-origin auth/project/task Route Handlers.
 - `components/auth/`: forms, logout, and session-unavailable feedback.
+- `components/projects/`, `components/tasks/`: resource forms, lists, filters, and deletion confirmations.
 - `components/ui/`: shared page heading.
+- `lib/tasks/`: shared task validation, UTC dates, and URL query handling.
+- `lib/api/mutation.ts`: shared browser mutation transport and safe failure handling.
 - `types/`: API/domain contracts; UUIDs/date-times remain strings.
 - `lib/auth/validation.ts`: shared credential validation and field errors.
 - `lib/api/error.ts`: normalized API errors.
@@ -142,3 +145,58 @@ response bodies. For a detail-page 404, the validated reference is recorded in t
 server log as `project_unavailable`; the public not-found response stays identical
 for missing/inaccessible projects. No resource IDs, tokens, bodies, or backend
 messages are logged there.
+
+## Milestone 4: tasks
+
+Server Components load tasks within the authenticated project page. Each domain
+operation independently verifies authentication. POST `/api/projects/[id]/tasks`
+creates a task; PATCH/DELETE `/api/tasks/[id]` update/delete it. JSON handlers apply
+Origin and JSON content-type checks and return JSON authentication errors. The
+browser receives only task fields and safe errors, never bearer tokens. Reads and
+mutation responses remain uncached.
+
+Task fields are allowlisted: title, description, status, priority, and due_at.
+Creation and PATCH have separate validation. PATCH forwards only supplied fields;
+omissions preserve existing values, while null and empty descriptions remain
+separate values. The edit form sends only changed fields. FastAPI is authoritative
+for validation, ownership, status transitions, and completed_at; clients cannot
+write completion timestamps. Priority uses the backend's numeric values 1–3 without
+inventing priority labels or ordering semantics.
+
+Date inputs and displayed timestamps explicitly use **UTC**. A datetime input is
+interpreted as UTC, not the browser's local timezone. API input must include Z or
+an explicit offset. Blank due dates clear the value; unchanged dates are omitted
+from PATCH, preserving backend precision. Display uses a fixed UTC timezone and
+an explicit UTC suffix. Invalid calendar dates are rejected.
+
+Status, priority, and due_before filters live in the URL. Applying/clearing filters
+resets offset and preserves unrelated query parameters. Task pagination follows
+the same limit/offset and full-page Next convention as projects, without a total
+count. Invalid URL filters are ignored with a visible warning. Active filters may
+hide a newly created or edited task; no optimistic lifecycle state is invented.
+
+Forms have associated labels and field errors, pending states, visible keyboard
+focus, and live feedback. Editors and deletion confirmations are inline and
+keyboard accessible. Deletion requires confirmation and handles empty 204 responses. Layouts stack on narrow screens. Shared
+mutation handling preserves safe support references, distinguishes authentication,
+validation, missing resources, transport failures, and service failures, and never
+retries writes automatically. Timeout/network messages advise checking the result
+before retrying because the operation may already have completed.
+
+### Task verification and limitations
+
+Local checks used an in-memory backend fixture with the real Next.js handlers:
+CRUD, combined filters, pagination, ownership rejection, JSON 401s, partial PATCH,
+null/empty fields, field allowlists, Origin/content-type rejection, and safe
+401/404/422/network/5xx errors. Mocked transport checks cover timeout, response-body
+failures, request-ID preservation, and no automatic mutation retries. Browser
+checks cover creation, editing, completion display, UTC dates, filters, and deletion.
+These checks do not change production data. The fixture is temporary rather than
+an installed test framework or a committed test suite.
+
+Known limitations: forms require JavaScript; there are no refresh tokens, offline
+mode, realtime updates, or conflict/version checks. Pagination can show an empty
+page after a full final page; use Previous. Dates are UTC-only, not per-user local
+time. Resource response shapes rely on the API contract rather than a runtime
+schema library. Live backend task CRUD still needs a deployment smoke test with a
+disposable account; local fixture checks cannot prove production business rules.

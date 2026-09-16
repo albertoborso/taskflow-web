@@ -56,3 +56,19 @@ export interface ProjectUpdateInput {
   name?: string | null;
   description?: string | null;
 }
+
+export interface TaskCreateInput {
+  title: string;
+  description?: string | null;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  due_at?: string | null;
+}
+
+export interface TaskUpdateInput {
+  title?: string | null;
+  description?: string | null;
+  status?: TaskStatus | null;
+  priority?: TaskPriority | null;
+  due_at?: string | null;
+}

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { TaskList } from "@/components/tasks/task-list";
 import { notFound, redirect } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
 import { ProjectForm } from "@/components/projects/project-form";
@@ -8,7 +10,7 @@ import { requireSession } from "@/lib/server/auth/session";
 import { getProject } from "@/lib/server/api/projects";
 import { projectFailure } from "@/lib/server/projects/errors";
 
-export default async function ProjectPage({ params }: PageProps<"/projects/[id]">) {
+export default async function ProjectPage({ params, searchParams }: PageProps<"/projects/[id]">) {
   await requireSession();
   const { id } = await params;
   let project;
@@ -23,15 +25,21 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     }
     return <ProjectError {...failure} />;
   }
-  return <div className="max-w-2xl space-y-8">
+  const query = await searchParams;
+  return <div className="space-y-8">
     <Link href="/dashboard" className="underline underline-offset-4">Back to projects</Link>
     <PageHeading title={project.name} description="Project details" />
     <p className="whitespace-pre-wrap break-words">{project.description || "No description."}</p>
+    <details className="max-w-2xl rounded-lg border border-zinc-300 p-5 dark:border-zinc-700">
+      <summary className="mb-4 cursor-pointer text-lg font-semibold">Project settings</summary>
     <section className="space-y-4" aria-labelledby="edit-title">
       <h2 id="edit-title" className="text-xl font-semibold">Edit project</h2>
       <ProjectForm key={project.id} project={{ id: project.id, name: project.name, description: project.description }} />
     </section>
-    <section className="space-y-2"><h2 className="text-xl font-semibold">Tasks</h2><p>Task management is coming in Milestone 4.</p></section>
-    <DeleteProject id={project.id} name={project.name} />
+    <div className="mt-6"><DeleteProject id={project.id} name={project.name} /></div>
+    </details>
+    <Suspense key={JSON.stringify(query)} fallback={<p role="status">Loading tasks…</p>}>
+      <TaskList projectId={project.id} params={query} />
+    </Suspense>
   </div>;
 }

@@ -1,4 +1,4 @@
-export const UNCERTAIN_WRITE_MESSAGE = "The operation may have completed. Reload and check the project before trying again.";
+export const UNCERTAIN_WRITE_MESSAGE = "The operation may have completed. Reload and check the result before trying again.";
 
 export const PROJECT_FAILURE_CODES = [
   "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "CONFLICT",
