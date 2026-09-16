@@ -21,3 +21,18 @@ export function getApiOrigin(): string {
   }
   return url.origin;
 }
+
+// Explicit in production so proxy/forwarded host headers cannot define trust.
+export function getAppOrigin(requestUrl: string): string {
+  const value = process.env.APP_ORIGIN;
+  if (!value && process.env.NODE_ENV === "production") {
+    throw new Error("APP_ORIGIN is required in production.");
+  }
+  const url = new URL(value ?? new URL(requestUrl).origin);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password ||
+    url.pathname !== "/" || url.search || url.hash ||
+    (process.env.NODE_ENV === "production" && url.protocol !== "https:")) {
+    throw new Error("APP_ORIGIN must be an origin; production requires HTTPS.");
+  }
+  return url.origin;
+}

@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api/error";
 import { getApiOrigin } from "@/lib/server/config";
 import type { ApiErrorResponse, ValidationDetail } from "@/types/api";
 
-interface RequestOptions {
+export interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   token?: string;
   query?: Record<string, string | number | undefined>;

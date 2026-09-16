@@ -1,7 +1,7 @@
 import "server-only";
-import { apiFetch } from "./client";
+import { authenticatedFetch } from "@/lib/server/auth/session";
 import type { Page, PaginationParams } from "@/types/api";
-import type { Task, TaskPriority, TaskStatus } from "@/types/domain";
+import type { Task, TaskPriority, TaskStatus, TaskCreateInput, TaskUpdateInput } from "@/types/domain";
 
 export interface TaskFilters extends PaginationParams {
   status?: TaskStatus;
@@ -9,12 +9,24 @@ export interface TaskFilters extends PaginationParams {
   due_before?: string;
 }
 
-export function listTasks(token: string, projectId: string, filters: TaskFilters = {}): Promise<Page<Task>> {
-  return apiFetch<Page<Task>>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks`, {
-    token, query: { ...filters },
+export function listTasks(projectId: string, filters: TaskFilters = {}): Promise<Page<Task>> {
+  return authenticatedFetch<Page<Task>>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks`, {
+    query: { ...filters },
   });
 }
 
-export function getTask(token: string, id: string): Promise<Task> {
-  return apiFetch<Task>(`/api/v1/tasks/${encodeURIComponent(id)}`, { token });
+export function getTask(id: string): Promise<Task> {
+  return authenticatedFetch<Task>(`/api/v1/tasks/${encodeURIComponent(id)}`);
+}
+
+export function createTask(projectId: string, input: TaskCreateInput): Promise<Task> {
+  return authenticatedFetch<Task>(`/api/v1/projects/${encodeURIComponent(projectId)}/tasks`, { method: "POST", body: input });
+}
+
+export function updateTask(id: string, input: TaskUpdateInput): Promise<Task> {
+  return authenticatedFetch<Task>(`/api/v1/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body: input });
+}
+
+export function deleteTask(id: string): Promise<void> {
+  return authenticatedFetch<void>(`/api/v1/tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
